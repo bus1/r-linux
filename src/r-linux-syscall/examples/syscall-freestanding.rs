@@ -9,7 +9,7 @@ fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
 }
 
 #[export_name = "_start"]
-pub extern fn entrypoint() -> ! {
+pub extern "C" fn entrypoint() -> ! {
     unsafe {
         r_linux_syscall::raw::syscall1(60, 71);
     }

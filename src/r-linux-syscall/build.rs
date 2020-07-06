@@ -8,6 +8,8 @@ use cc;
 
 fn main() {
     let mut build = cc::Build::new();
+
+    #[rustfmt::skip]
     let architectures = [
         "x86",
         "x86_64",

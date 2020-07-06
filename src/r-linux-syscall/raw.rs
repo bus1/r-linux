@@ -130,7 +130,8 @@ impl Retval {
 // These symbols are provided by our native code, because there is currently no
 // stable way to inline assembly into rust code. Once inline-assembly is stable,
 // we can provide these symbols as native-rust code.
-extern {
+#[rustfmt::skip]
+extern "C" {
     fn r_linux_asm_syscall0(
         nr: usize,
     ) -> usize;
@@ -185,6 +186,7 @@ extern {
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall0(
     nr: usize,
@@ -205,6 +207,7 @@ pub unsafe fn syscall0(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall1(
     nr: usize,
@@ -226,6 +229,7 @@ pub unsafe fn syscall1(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall2(
     nr: usize,
@@ -248,6 +252,7 @@ pub unsafe fn syscall2(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall3(
     nr: usize,
@@ -271,6 +276,7 @@ pub unsafe fn syscall3(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall4(
     nr: usize,
@@ -295,6 +301,7 @@ pub unsafe fn syscall4(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall5(
     nr: usize,
@@ -320,6 +327,7 @@ pub unsafe fn syscall5(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
+#[rustfmt::skip]
 #[inline(always)]
 pub unsafe fn syscall6(
     nr: usize,
@@ -347,6 +355,7 @@ mod test {
         // the same semantics as the system call ABI.
         //
 
+        #[rustfmt::skip]
         let success_values = [
             0, 1, 2, 3,
             254, 255, 256, 257,

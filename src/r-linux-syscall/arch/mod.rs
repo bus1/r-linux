@@ -14,6 +14,7 @@
 // We need architecture-dependent assembly to invoke system calls. To avoid
 // spurious linker errors in dependent crates, we check for supported
 // architectures here and error out right away.
+#[rustfmt::skip]
 #[cfg(not(any(
     target_arch = "x86",
     target_arch = "x86_64",
