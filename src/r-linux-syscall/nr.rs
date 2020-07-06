@@ -128,7 +128,25 @@ pub use crate::arch::native::nr::OPEN;
 pub use crate::arch::native::nr::CLOSE;
 
 /// XXX
+pub use crate::arch::native::nr::LSEEK;
+
+/// XXX
 pub use crate::arch::native::nr::GETPID;
+
+/// XXX
+pub use crate::arch::native::nr::PIPE2;
+
+/// XXX
+pub use crate::arch::native::nr::MEMFD_CREATE;
+
+/// XXX
+pub use crate::arch::native::nr::READLINKAT;
+
+/// XXX
+pub use crate::arch::native::nr::STATX;
+
+/// XXX
+pub use crate::arch::native::nr::COPY_FILE_RANGE;
 
 /// XXX
 pub use crate::arch::native::nr::DUP;

@@ -457,32 +457,262 @@ mod test {
     }
 
     #[test]
-    fn syscall_check() {
+    fn syscall0_check() {
+        //
         // Test validity of `syscall0()`.
+        //
+        // Tested syscall: GETPID
+        //
+
         let r0 = unsafe { syscall0(crate::nr::GETPID) };
         assert_eq!(r0.unwrap() as u32, std::process::id());
+    }
 
+    #[test]
+    fn syscall1_check() {
+        //
         // Test validity of `syscall1()`.
-        let r1 = unsafe { syscall1(crate::nr::DUP, 0) };
-        assert!(r1.unwrap() > 2);
-        let r2 = unsafe { syscall1(crate::nr::CLOSE, r1.unwrap() as usize) };
-        assert_eq!(r2.unwrap(), 0);
+        //
+        // Tested syscall: CLOSE
+        //
+        // We run `pipe2()` and verify the `close()` syscall accepts the values
+        // without complaint.
+        //
 
+        let mut p0: [u32; 2] = [0, 0];
+
+        let r0 = unsafe { syscall2(crate::nr::PIPE2, p0.as_mut_ptr() as usize, 0).unwrap() };
+        assert_eq!(r0, 0);
+        assert!(p0[0] > 2);
+        assert!(p0[1] > 2);
+        assert_ne!(p0[0], p0[1]);
+
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[0] as usize).unwrap() };
+        assert_eq!(r0, 0);
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[1] as usize).unwrap() };
+        assert_eq!(r0, 0);
+    }
+
+    #[test]
+    fn syscall2_check() {
+        //
         // Test validity of `syscall2()`.
-        let r3 = unsafe { syscall2(crate::nr::DUP2, 0, r1.unwrap() as usize) };
-        assert_eq!(r3.unwrap(), r1.unwrap());
-        let r4 = unsafe { syscall1(crate::nr::CLOSE, r3.unwrap() as usize) };
-        assert_eq!(r4.unwrap(), 0);
+        //
+        // Tested syscall: PIPE2
+        //
+        // We run `pipe2()` and verify the `close()` syscall accepts the values
+        // without complaint.
+        //
 
+        let mut p0: [u32; 2] = [0, 0];
+
+        let r0 = unsafe { syscall2(crate::nr::PIPE2, p0.as_mut_ptr() as usize, 0).unwrap() };
+        assert_eq!(r0, 0);
+        assert!(p0[0] > 2);
+        assert!(p0[1] > 2);
+        assert_ne!(p0[0], p0[1]);
+
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[0] as usize).unwrap() };
+        assert_eq!(r0, 0);
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[1] as usize).unwrap() };
+        assert_eq!(r0, 0);
+    }
+
+    #[test]
+    fn syscall3_check() {
+        //
         // Test validity of `syscall3()`.
-        // XXX: We should pass `O_CLOEXEC` and verify it is set. Otherwise, we
-        //      do not really test for the 3rd argument, as 0 is just a too
-        //      common value.
-        let r5 = unsafe { syscall3(crate::nr::DUP3, 0, r1.unwrap() as usize, 0) };
-        assert_eq!(r5.unwrap(), r1.unwrap());
-        let r6 = unsafe { syscall1(crate::nr::CLOSE, r5.unwrap() as usize) };
-        assert_eq!(r6.unwrap(), 0);
+        //
+        // Tested syscall: WRITE / READ
+        //
+        // We create a pipe, write to one end and verify we can read the same
+        // data from the other end.
+        //
 
-        // XXX: Tests missing for syscall{4,5,6}().
+        let mut p0: [u32; 2] = [0, 0];
+        let mut b0: [u8; 16] = [0; 16];
+
+        let r0 = unsafe { syscall2(crate::nr::PIPE2, p0.as_mut_ptr() as usize, 0).unwrap() };
+        assert_eq!(r0, 0);
+        assert!(p0[0] > 2);
+        assert!(p0[1] > 2);
+        assert_ne!(p0[0], p0[1]);
+
+        let r0 = unsafe {
+            syscall3(
+                crate::nr::WRITE,
+                p0[1] as usize,
+                "foobar".as_ptr() as usize,
+                6 as usize,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 6);
+
+        let r0 = unsafe {
+            syscall3(
+                crate::nr::READ,
+                p0[0] as usize,
+                b0.as_mut_ptr() as usize,
+                6 as usize,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 6);
+        assert_eq!(core::str::from_utf8(&b0[..6]), Ok("foobar"));
+
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[0] as usize).unwrap() };
+        assert_eq!(r0, 0);
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[1] as usize).unwrap() };
+        assert_eq!(r0, 0);
+    }
+
+    #[test]
+    fn syscall4_check() {
+        //
+        // Test validity of `syscall4()`.
+        //
+        // Tested syscall: READLINKAT
+        //
+        // We create a memfd and then query `/proc` for the link-value of the
+        // memfd. This is ABI and needs to be the (annotated) name that we
+        // passed to `memfd_create()`.
+        //
+
+        let mut b0: [u8; 128] = [0; 128];
+
+        let f0 = unsafe {
+            syscall2(crate::nr::MEMFD_CREATE, "foobar\x00".as_ptr() as usize, 0).unwrap()
+        };
+        assert!(f0 > 2);
+
+        let r0 = unsafe {
+            syscall4(
+                crate::nr::READLINKAT,
+                core::usize::MAX - 100 + 1, // AT_FDCWD
+                format!("/proc/self/fd/{}\x00", f0).as_str().as_ptr() as usize,
+                b0.as_mut_ptr() as usize,
+                128 - 1,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 23);
+        assert_eq!(
+            core::str::from_utf8(&b0[..23]).unwrap(),
+            "/memfd:foobar (deleted)",
+        );
+
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, f0).unwrap() };
+        assert_eq!(r0, 0);
+    }
+
+    #[test]
+    fn syscall5_check() {
+        //
+        // Test validity of `syscall5()`.
+        //
+        // Tested syscall: STATX
+        //
+        // Run `statx()` on `STDIN`, but pass `AT_SYMLINK_NOFOLLOW`. This
+        // means we instead get information on the symlink in `/proc`. Check
+        // that this was correctly interpreted by the kernel and verify the
+        // `S_IFLNK` flag is set on the result.
+        //
+
+        let mut b0: [u32; 1024] = [0; 1024];
+
+        let r0 = unsafe {
+            syscall5(
+                crate::nr::STATX,
+                core::usize::MAX - 100 + 1, // AT_FDCWD
+                "/proc/self/fd/0".as_ptr() as usize,
+                0x100, // AT_SYMLINK_NOFOLLOW
+                0x1,   // STATX_TYPE
+                b0.as_mut_ptr() as usize,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 0);
+        assert_ne!(b0[0] & 0x1, 0);
+        assert_eq!(
+            unsafe { core::ptr::read_unaligned((b0.as_ptr() as *const u16).offset(14)) } & 0o170000, // S_IFMT
+            0o120000, // S_IFLNK
+        );
+    }
+
+    #[test]
+    fn syscall6_check() {
+        //
+        // Test validity of `syscall6()`.
+        //
+        // Tested syscall: COPY_FILE_RANGE
+        //
+        // Create two memfd instances, write a text into the first one. Use
+        // the `copy_file_range()` syscall to copy the data over into the other
+        // memfd and then verify via `read()`. Use `lseek()` to reset the file
+        // position between calls.
+        //
+
+        let mut b0: [u8; 128] = [0; 128];
+
+        let f0 = unsafe {
+            syscall2(crate::nr::MEMFD_CREATE, "foobar\x00".as_ptr() as usize, 0).unwrap()
+        };
+        let f1 = unsafe {
+            syscall2(crate::nr::MEMFD_CREATE, "foobar\x00".as_ptr() as usize, 0).unwrap()
+        };
+        assert!(f0 > 2);
+        assert!(f1 > 2);
+        assert_ne!(f0, f1);
+
+        let r0 = unsafe {
+            syscall3(
+                crate::nr::WRITE,
+                f0 as usize,
+                "foobar".as_ptr() as usize,
+                6 as usize,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 6);
+
+        let r0 =
+            unsafe { syscall3(crate::nr::LSEEK, f0 as usize, 0 as usize, 0 as usize).unwrap() };
+        assert_eq!(r0, 0);
+
+        let r0 = unsafe {
+            syscall6(
+                crate::nr::COPY_FILE_RANGE,
+                f0 as usize,
+                0 as usize,
+                f1 as usize,
+                0 as usize,
+                6 as usize,
+                0 as usize,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 6);
+
+        let r0 =
+            unsafe { syscall3(crate::nr::LSEEK, f1 as usize, 0 as usize, 0 as usize).unwrap() };
+        assert_eq!(r0, 0);
+
+        let r0 = unsafe {
+            syscall3(
+                crate::nr::READ,
+                f1 as usize,
+                b0.as_mut_ptr() as usize,
+                6 as usize,
+            )
+            .unwrap()
+        };
+        assert_eq!(r0, 6);
+        assert_eq!(core::str::from_utf8(&b0[..6]), Ok("foobar"));
+
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, f1).unwrap() };
+        assert_eq!(r0, 0);
+        let r0 = unsafe { syscall1(crate::nr::CLOSE, f0).unwrap() };
+        assert_eq!(r0, 0);
     }
 }
