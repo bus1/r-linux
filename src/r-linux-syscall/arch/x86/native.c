@@ -116,8 +116,9 @@ unsigned long r_linux_asm_syscall6(unsigned long nr,
 		 * We need to pass `arg5` in `ebp`. We cannot easily get this
 		 * in another register (there is no `ebp` constraint for inline
 		 * asm). Instead, we use the generic `g` constraint. We also
-		 * immediately save it on the stack, to avoid any clobbering of
-		 * its source. We then switch with ebp and enter the syscall.
+		 * immediately save it on the stack, because it might be `esp`
+		 * based and thus invalid as soon as we modify `esp` to save
+		 * `ebp`.
 		 */
 		"pushl %7;"
 		"push %%ebp;"
