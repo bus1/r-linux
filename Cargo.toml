@@ -1,0 +1,10 @@
+[workspace]
+members = [
+        "src/r-linux-syscall",
+]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
