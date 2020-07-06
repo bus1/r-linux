@@ -7,6 +7,11 @@
 //! For performance reasons, you might want to prefer the matching call,
 //! though.
 //!
+//! This implementation is optimized to allow inlining of the system-call
+//! invocation into the calling function. That is, when xLTO is used, the
+//! syscall setup and instruction will be inlined into the caller, and thus
+//! allow fast and efficient kernel calls.
+//!
 //! Linux system calls take between 0 and 6 arguments, each argument is passed
 //! as a native integer. Furthermore, every system call has a return value,
 //! which also is a native integer. Depending on the platform you run on, the
