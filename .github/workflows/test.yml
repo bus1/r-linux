@@ -1,0 +1,32 @@
+name: "Test Suite"
+
+on:
+  push:
+  pull_request:
+  schedule:
+  - cron:  '0 0 * * *'
+
+jobs:
+  crate:
+    name: "Crate Test"
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: "Fetch Sources"
+      uses: actions/checkout@v2
+    - name: "Build Crates"
+      run: cargo build --verbose --all-targets
+    - name: "Run Tests"
+      run: cargo test --verbose
+
+  xlto:
+    name: "xLTO Test"
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: "Fetch Sources"
+      uses: actions/checkout@v2
+    - name: "Run xLTO Test"
+      run: make test-syscall-xlto
+    - name: "Run no-xLTO Test"
+      run: make test-syscall-no-xlto
