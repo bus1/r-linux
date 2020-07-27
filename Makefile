@@ -9,7 +9,7 @@ BUILDDIR ?= .
 SRCDIR ?= .
 
 CARGO ?= cargo
-CLANG ?= clang
+CLANG ?= clang-10
 LLD ?= lld
 MKDIR ?= mkdir
 OBJDUMP ?= objdump
