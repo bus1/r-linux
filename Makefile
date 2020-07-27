@@ -8,7 +8,11 @@
 BUILDDIR ?= .
 SRCDIR ?= .
 
+CARGO ?= cargo
+CLANG ?= clang
+LLD ?= lld
 MKDIR ?= mkdir
+OBJDUMP ?= objdump
 PYTHON3 ?= python3
 RST2MAN ?= rst2man
 TAR ?= tar
@@ -48,10 +52,10 @@ help:
 	@echo "    help:               Print this usage information."
 
 $(BUILDDIR)/:
-	mkdir -p "$@"
+	$(MKDIR) -p "$@"
 
 $(BUILDDIR)/%/:
-	mkdir -p "$@"
+	$(MKDIR) -p "$@"
 
 #
 # Test: syscall xLTO
@@ -74,23 +78,23 @@ TEST_SYSCALL_FILTER_SYMBOLS = \
 test-syscall-xlto: | $(BUILDDIR)/
 	( \
 		cd $(SRCDIR_ABS)/src/r-linux-syscall ; \
-		CC=clang \
+		CC=$(CLANG) \
 		CFLAGS=-flto=thin \
-			cargo rustc \
+			$(CARGO) rustc \
 				--example="syscall-freestanding" \
 				--features="freestanding-example" \
 				--release \
 				--target-dir="$(BUILDDIR_ABS)/target-syscall-xlto" \
 				-vv \
 				-- \
-					-C linker=clang \
-					-C link-arg=-fuse-ld=lld \
-					-C link-arg=-nostartfiles \
-					-C linker-plugin-lto=yes \
+					-C "linker=$(CLANG)" \
+					-C "link-arg=-fuse-ld=$(LLD)" \
+					-C "link-arg=-nostartfiles" \
+					-C "linker-plugin-lto=yes" \
 	)
 	( \
 		SYMS_REAL="$$( \
-			objdump \
+			$(OBJDUMP) \
 				-d \
 				"$(BUILDDIR)/target-syscall-xlto/release/examples/syscall-freestanding" \
 			| $(TEST_SYSCALL_FILTER_SYMBOLS) \
@@ -105,7 +109,7 @@ test-syscall-xlto: | $(BUILDDIR)/
 test-syscall-no-xlto: | $(BUILDDIR)/
 	( \
 		cd $(SRCDIR_ABS)/src/r-linux-syscall ; \
-		cargo rustc \
+		$(CARGO) rustc \
 			--example="syscall-freestanding" \
 			--features="freestanding-example" \
 			--target-dir="$(BUILDDIR_ABS)/target-syscall-no-xlto" \
@@ -115,7 +119,7 @@ test-syscall-no-xlto: | $(BUILDDIR)/
 	)
 	( \
 		SYMS_REAL="$$( \
-			objdump \
+			$(OBJDUMP) \
 				-d \
 				"$(BUILDDIR)/target-syscall-no-xlto/debug/examples/syscall-freestanding" \
 			| $(TEST_SYSCALL_FILTER_SYMBOLS) | grep "r_linux" \
