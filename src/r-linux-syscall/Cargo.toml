@@ -11,7 +11,7 @@ categories = [
 ]
 description = "Linux Kernel System Calls"
 edition = "2018"
-homepage = "https://github.com/converse1/r-linux"
+homepage = "https://github.com/bus1/r-linux"
 keywords = [
         "api",
         "kernel",
@@ -19,7 +19,7 @@ keywords = [
         "syscall",
 ]
 license = "Apache-2.0 OR LGPL-2.1-or-later"
-repository = "https://github.com/converse1/r-linux"
+repository = "https://github.com/bus1/r-linux"
 
 [features]
 freestanding-example = []

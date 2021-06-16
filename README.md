@@ -10,8 +10,8 @@ API in a safer manner.
 
 ### Project
 
- * **Website**: <https://github.com/converse1/r-linux/wiki>
- * **Bug Tracker**: <https://github.com/converse1/r-linux/issues>
+ * **Website**: <https://github.com/bus1/r-linux/wiki>
+ * **Bug Tracker**: <https://github.com/bus1/r-linux/issues>
 
 ### Requirements
 
@@ -29,9 +29,9 @@ cargo build
 
 ### Repository:
 
- - **web**:   <https://github.com/converse1/r-linux>
- - **https**: `https://github.com/converse1/r-linux.git`
- - **ssh**:   `git@github.com:converse1/r-linux.git`
+ - **web**:   <https://github.com/bus1/r-linux>
+ - **https**: `https://github.com/bus1/r-linux.git`
+ - **ssh**:   `git@github.com:bus1/r-linux.git`
 
 ### License:
 

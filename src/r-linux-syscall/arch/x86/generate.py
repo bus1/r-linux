@@ -1,11 +1,11 @@
 #!/usr/bin/python3
-"""Code Generator for x86_64
+"""Code Generator for x86
 
 This script is used to generate some of the sources of this crate. It currently
 generates the following data:
 
-   * x86_64 Syscall Numbers
-     The system call numbers for x86_64 are kept in a simple table in the linux
+   * x86 (and x86_64) Syscall Numbers
+     The system call numbers for x86 are kept in a simple table in the linux
      kernel sources. This table contains the system-call number, the ABI its
      included in, the system call name, and possibly the system call entry
      point.
@@ -22,8 +22,7 @@ import urllib.request
 def systbl_fetch(*, args):
     """Fetch Syscall Table
 
-    Fetch the x86_64 syscall-table from the official git repository.
-    Optionally use a different branch than `master`.
+    Fetch the x86[_64] syscall-table from the official git repository.
     """
 
     host = "git.kernel.org"
@@ -53,7 +52,7 @@ def systbl_fetch(*, args):
 def systbl_parse(*, args, data):
     """Parse Syscall Table
 
-    The x86_64 syscall table contains entries in the style of:
+    The x86 syscall table contains entries in the style of:
         0   common  read    sys_read
     The file can contain comments, and entries might lack the last
     column.
@@ -103,7 +102,7 @@ def parse_args(argv):
         add_help=True,
         allow_abbrev=False,
         argument_default=None,
-        description="Code Generator for x86_64",
+        description="Code Generator for x86",
         prog="generate.py",
     )
 

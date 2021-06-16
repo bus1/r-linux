@@ -34,7 +34,7 @@ pub mod x86_64;
 ///
 /// Note that your code will become architecture-dependent when you use this
 /// re-export, as it can and will expose differences between the ABIs of the
-/// linux kernel architecture. However, in a lot of cases this is might be what
+/// linux kernel architecture. However, in a lot of cases this might be what
 /// you want, and it also can simplify bootstrapping applications quite a bit.
 ///
 /// Note that for documentation reasons, this module shows the symbols of the
