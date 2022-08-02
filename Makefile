@@ -8,15 +8,11 @@
 BUILDDIR ?= .
 SRCDIR ?= .
 
-CARGO ?= cargo
-CLANG ?= clang-11
-LLD ?= lld
-MKDIR ?= mkdir
-OBJDUMP ?= objdump
-PYTHON3 ?= python3
-RST2MAN ?= rst2man
-TAR ?= tar
-WGET ?= wget
+BIN_CARGO ?= cargo
+BIN_CLANG ?= clang-11
+BIN_LLD ?= lld
+BIN_MKDIR ?= mkdir
+BIN_OBJDUMP ?= objdump
 
 SHELL = /bin/bash
 
@@ -52,18 +48,18 @@ help:
 	@echo "    help:               Print this usage information."
 
 $(BUILDDIR)/:
-	$(MKDIR) -p "$@"
+	$(BIN_MKDIR) -p "$@"
 
 $(BUILDDIR)/%/:
-	$(MKDIR) -p "$@"
+	$(BIN_MKDIR) -p "$@"
 
 #
 # Test: syscall xLTO
 #
-# This provides 2 test targets for the `freestanding-syscall` example of the
-# `r-linux-syscall` crate. It compiles the target as freestanding binary with
-# and without `xLTO` (cross-language link-time-optimization). It then verifies
-# that the disassembly correctly reflects the inlined or non-inlined syscall.
+# This provides 2 test targets for the `freestanding-syscall` example. It
+# compiles the target as freestanding binary with and without `xLTO`
+# (cross-language link-time-optimization). It then verifies that the
+# disassembly correctly reflects the inlined or non-inlined syscall.
 #
 
 TEST_SYSCALL_FILTER_SYMBOLS = \
@@ -77,26 +73,25 @@ TEST_SYSCALL_FILTER_SYMBOLS = \
 .PHONY: test-syscall-xlto
 test-syscall-xlto: | $(BUILDDIR)/
 	( \
-		cd $(SRCDIR_ABS)/src/r-linux-syscall ; \
-		CC=$(CLANG) \
+		CC=$(BIN_CLANG) \
 		CFLAGS=-flto=thin \
-			$(CARGO) rustc \
-				--example="syscall-freestanding" \
-				--features="freestanding-example" \
+			$(BIN_CARGO) +nightly rustc \
+				--example="freestanding-syscall" \
+				--features="freestanding,unstable" \
 				--release \
 				--target-dir="$(BUILDDIR_ABS)/target-syscall-xlto" \
 				-vv \
 				-- \
-					-C "linker=$(CLANG)" \
-					-C "link-arg=-fuse-ld=$(LLD)" \
+					-C "linker=$(BIN_CLANG)" \
+					-C "link-arg=-fuse-ld=$(BIN_LLD)" \
 					-C "link-arg=-nostartfiles" \
 					-C "linker-plugin-lto=yes" \
 	)
 	( \
 		SYMS_REAL="$$( \
-			$(OBJDUMP) \
+			$(BIN_OBJDUMP) \
 				-d \
-				"$(BUILDDIR)/target-syscall-xlto/release/examples/syscall-freestanding" \
+				"$(BUILDDIR)/target-syscall-xlto/release/examples/freestanding-syscall" \
 			| $(TEST_SYSCALL_FILTER_SYMBOLS) \
 		)" ; \
 		SYMS_EXPECTED="<_start>:" ; \
@@ -108,10 +103,9 @@ test-syscall-xlto: | $(BUILDDIR)/
 .PHONY: test-syscall-no-xlto
 test-syscall-no-xlto: | $(BUILDDIR)/
 	( \
-		cd $(SRCDIR_ABS)/src/r-linux-syscall ; \
-		$(CARGO) rustc \
-			--example="syscall-freestanding" \
-			--features="freestanding-example" \
+		$(BIN_CARGO) +nightly rustc \
+			--example="freestanding-syscall" \
+			--features="freestanding,unstable" \
 			--target-dir="$(BUILDDIR_ABS)/target-syscall-no-xlto" \
 			-vv \
 			-- \
@@ -119,9 +113,9 @@ test-syscall-no-xlto: | $(BUILDDIR)/
 	)
 	( \
 		SYMS_REAL="$$( \
-			$(OBJDUMP) \
+			$(BIN_OBJDUMP) \
 				-d \
-				"$(BUILDDIR)/target-syscall-no-xlto/debug/examples/syscall-freestanding" \
+				"$(BUILDDIR)/target-syscall-no-xlto/debug/examples/freestanding-syscall" \
 			| $(TEST_SYSCALL_FILTER_SYMBOLS) | grep "r_linux" \
 		)" ; \
 		SYMS_EXPECTED="<r_linux_asm_syscall1>:" ; \

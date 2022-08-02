@@ -1,27 +1,15 @@
-//! System Call Numbers
+//! System Call API
 //!
-//! This module provides symbols for all available system calls, which resolve
-//! to the system call number of the respective system call. Only system calls
-//! that resolve to the same call on all supported platforms are listed (this
-//! guarantees that the symbols here are well defined and always available). If
-//! you need access to all system calls of the compiled platform, use the
-//! symbols from `arch::native::nr`.
-//!
-//! The symbols provided here always resolve to the system call of the native
-//! platform of this compilation. If you need the symbols of a specific
-//! platform, use `arch::<platform>::nr`.
-//!
-//! For a system call to be listed here, it needs to be available on all
-//! platforms we support, have the same number of arguments and argument order
-//! on all platforms, and have the same semantics everywhere. This usually
-//! involves a manual auditing of each syscall. Therefore, this list is not
-//! exhaustive, and a lot of legacy system calls might never make it on this
-//! list. Therefore, resort to `arch::native::nr` for missing system calls. For
-//! those you need to perform the respective audits yourself, though.
+//! This module provides symbols for all available system calls, implementing a
+//! uniform API to call into the kernel. Any architecture-peculiarities are
+//! hidden from the caller, except if they leak into external data definitions.
+//! That is, binary formatting of argument structures still need to be
+//! performed by the caller. However, correct syscall invocation and splitting
+//! across registers is performed by these helpers.
+
+pub use super::raw::Retval;
 
 /// Restart System Call
-///
-/// `fn sys_restart_syscall() -> usize`
 ///
 /// This system call continues an interrupted system call with the same
 /// parameters it was initially called, adjusted only for the time difference
@@ -48,7 +36,11 @@
 /// If no system call is to be resumed, this system call returns `EINTR`.
 /// Otherwise, it resumes the original system call with adjusted relative time
 /// parameters and returns the result of the resumed system call.
-pub use crate::arch::native::nr::RESTART_SYSCALL;
+pub unsafe fn restart_syscall() -> Retval {
+    super::raw::syscall0(
+        super::arch::native::nr::RESTART_SYSCALL,
+    )
+}
 
 /// Exit Task
 ///
@@ -63,27 +55,27 @@ pub use crate::arch::native::nr::RESTART_SYSCALL;
 ///
 /// This system call never returns, under no circumstances. This also implies
 /// that this system call cannot be interrupted.
-pub use crate::arch::native::nr::EXIT;
+pub use crate::syscall::arch::native::nr::EXIT;
 
 /// Fork Task
 ///
 /// XXX
-pub use crate::arch::native::nr::FORK;
+pub use crate::syscall::arch::native::nr::FORK;
 
 /// Read from File-Descriptor
 ///
 /// XXX
-pub use crate::arch::native::nr::READ;
+pub use crate::syscall::arch::native::nr::READ;
 
 /// Write to File-Descriptor
 ///
 /// XXX
-pub use crate::arch::native::nr::WRITE;
+pub use crate::syscall::arch::native::nr::WRITE;
 
 /// Open File
 ///
 /// XXX
-pub use crate::arch::native::nr::OPEN;
+pub use crate::syscall::arch::native::nr::OPEN;
 
 /// Close File Descriptor
 ///
@@ -125,34 +117,34 @@ pub use crate::arch::native::nr::OPEN;
 /// arbitrary amount of time. This especially means you *MUST NOT* rely on this
 /// function implying an `fsync()`, unless you verified this via the kernel
 /// sources yourself.
-pub use crate::arch::native::nr::CLOSE;
+pub use crate::syscall::arch::native::nr::CLOSE;
 
 /// XXX
-pub use crate::arch::native::nr::LSEEK;
+pub use crate::syscall::arch::native::nr::LSEEK;
 
 /// XXX
-pub use crate::arch::native::nr::GETPID;
+pub use crate::syscall::arch::native::nr::GETPID;
 
 /// XXX
-pub use crate::arch::native::nr::PIPE2;
+pub use crate::syscall::arch::native::nr::PIPE2;
 
 /// XXX
-pub use crate::arch::native::nr::MEMFD_CREATE;
+pub use crate::syscall::arch::native::nr::MEMFD_CREATE;
 
 /// XXX
-pub use crate::arch::native::nr::READLINKAT;
+pub use crate::syscall::arch::native::nr::READLINKAT;
 
 /// XXX
-pub use crate::arch::native::nr::STATX;
+pub use crate::syscall::arch::native::nr::STATX;
 
 /// XXX
-pub use crate::arch::native::nr::COPY_FILE_RANGE;
+pub use crate::syscall::arch::native::nr::COPY_FILE_RANGE;
 
 /// XXX
-pub use crate::arch::native::nr::DUP;
+pub use crate::syscall::arch::native::nr::DUP;
 
 /// XXX
-pub use crate::arch::native::nr::DUP2;
+pub use crate::syscall::arch::native::nr::DUP2;
 
 /// XXX
-pub use crate::arch::native::nr::DUP3;
+pub use crate::syscall::arch::native::nr::DUP3;

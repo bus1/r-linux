@@ -9,3 +9,4 @@
 //! exposed by the `api` module.
 
 pub mod nr;
+pub mod syscall;

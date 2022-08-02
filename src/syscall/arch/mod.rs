@@ -14,7 +14,6 @@
 // We need architecture-dependent assembly to invoke system calls. To avoid
 // spurious linker errors in dependent crates, we check for supported
 // architectures here and error out right away.
-#[rustfmt::skip]
 #[cfg(not(any(
     target_arch = "x86",
     target_arch = "x86_64",
@@ -78,5 +77,66 @@ mod test {
 
         assert_eq!(x86::nr::EXIT, 1);
         assert_eq!(x86_64::nr::EXIT, 60);
+    }
+
+    #[test]
+    fn syscall_check() {
+        //
+        // Verify the `syscall0` to `syscall6` symbols are always available on
+        // the native architectures with the same prototype. Note that
+        // non-native prototypes are not available, since it would be non-sense
+        // to compile their assembly.
+        //
+
+        let s0: unsafe fn(
+            usize,
+        ) -> usize = native::syscall::syscall0;
+        let s1: unsafe fn(
+            usize,
+            usize,
+        ) -> usize = native::syscall::syscall1;
+        let s2: unsafe fn(
+            usize,
+            usize,
+            usize,
+        ) -> usize = native::syscall::syscall2;
+        let s3: unsafe fn(
+            usize,
+            usize,
+            usize,
+            usize,
+        ) -> usize = native::syscall::syscall3;
+        let s4: unsafe fn(
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+        ) -> usize = native::syscall::syscall4;
+        let s5: unsafe fn(
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+        ) -> usize = native::syscall::syscall5;
+        let s6: unsafe fn(
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+        ) -> usize = native::syscall::syscall6;
+
+        assert_ne!(s0 as *const () as usize, 0);
+        assert_ne!(s1 as *const () as usize, 0);
+        assert_ne!(s2 as *const () as usize, 0);
+        assert_ne!(s3 as *const () as usize, 0);
+        assert_ne!(s4 as *const () as usize, 0);
+        assert_ne!(s5 as *const () as usize, 0);
+        assert_ne!(s6 as *const () as usize, 0);
     }
 }

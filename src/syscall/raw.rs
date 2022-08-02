@@ -10,7 +10,8 @@
 //! This implementation is optimized to allow inlining of the system-call
 //! invocation into the calling function. That is, when xLTO is used, the
 //! syscall setup and instruction will be inlined into the caller, and thus
-//! allow fast and efficient kernel calls.
+//! allows fast and efficient kernel calls. On common architectures, the inline
+//! assembly is now stable rust, so no cross-language LTO is needed, anyway.
 //!
 //! Linux system calls take between 0 and 6 arguments, each argument is passed
 //! as a native integer. Furthermore, every system call has a return value,
@@ -21,8 +22,8 @@
 //! each system call to understand how individual arguments are passed. Be
 //! warned, there are even system calls that flip argument order depending on
 //! the architecture (for historical reasons, trying to provide binary
-//! compatibility to existing platforms). Use the wrapper definitions in the
-//! `api` module to get a verified function prototype for each system call.
+//! compatibility to existing platforms). Use the wrapper definitions to get a
+//! verified function prototype for each system call.
 //!
 //! The return value of a system call is limited to a native integer.
 //! Furthermore, 4096 values are reserved for error codes. For most syscalls
@@ -43,25 +44,21 @@ pub struct Retval(usize);
 
 impl Retval {
     /// Create a new return-value from raw data
-    #[inline(always)]
     pub const fn from_usize(v: usize) -> Retval {
         Retval(v)
     }
 
     /// Return raw underlying data of a return-value
-    #[inline(always)]
     pub const fn as_usize(self) -> usize {
         self.0
     }
 
     /// Check whether this is an error-return
-    #[inline(always)]
     pub const fn is_error(self) -> bool {
         self.0 > core::usize::MAX - 4096
     }
 
     /// Check whether this is a success-return
-    #[inline(always)]
     pub const fn is_success(self) -> bool {
         !self.is_error()
     }
@@ -72,7 +69,6 @@ impl Retval {
     ///
     /// This does not verify that `self` is actually an error-return. It
     /// assumes the caller verified it.
-    #[inline(always)]
     pub unsafe fn error_unchecked(self) -> usize {
         !self.0 + 1
     }
@@ -84,7 +80,7 @@ impl Retval {
         if self.is_error() {
             unsafe { self.error_unchecked() }
         } else {
-            panic!("called `r_linux_syscall::Retval::error()` on a success value")
+            panic!("called `r_linux::syscall::raw::Retval::error()` on a success value")
         }
     }
 
@@ -94,7 +90,6 @@ impl Retval {
     ///
     /// This does not verify that `self` is actually a success-return. It
     /// assumes the caller verified it.
-    #[inline(always)]
     pub unsafe fn unwrap_unchecked(self) -> usize {
         self.0
     }
@@ -106,7 +101,7 @@ impl Retval {
         if self.is_success() {
             unsafe { self.unwrap_unchecked() }
         } else {
-            panic!("called `r_linux_syscall::Retval::unwrap()` on an error value")
+            panic!("called `r_linux::syscall::raw::Retval::unwrap()` on an error value")
         }
     }
 
@@ -125,57 +120,6 @@ impl Retval {
     }
 }
 
-// Syscall Assembly
-//
-// These symbols are provided by our native code, because there is currently no
-// stable way to inline assembly into rust code. Once inline-assembly is stable,
-// we can provide these symbols as native-rust code.
-#[rustfmt::skip]
-extern "C" {
-    fn r_linux_asm_syscall0(
-        nr: usize,
-    ) -> usize;
-    fn r_linux_asm_syscall1(
-        nr: usize,
-        arg0: usize,
-    ) -> usize;
-    fn r_linux_asm_syscall2(
-        nr: usize,
-        arg0: usize,
-        arg1: usize,
-    ) -> usize;
-    fn r_linux_asm_syscall3(
-        nr: usize,
-        arg0: usize,
-        arg1: usize,
-        arg2: usize,
-    ) -> usize;
-    fn r_linux_asm_syscall4(
-        nr: usize,
-        arg0: usize,
-        arg1: usize,
-        arg2: usize,
-        arg3: usize,
-    ) -> usize;
-    fn r_linux_asm_syscall5(
-        nr: usize,
-        arg0: usize,
-        arg1: usize,
-        arg2: usize,
-        arg3: usize,
-        arg4: usize,
-    ) -> usize;
-    fn r_linux_asm_syscall6(
-        nr: usize,
-        arg0: usize,
-        arg1: usize,
-        arg2: usize,
-        arg3: usize,
-        arg4: usize,
-        arg5: usize,
-    ) -> usize;
-}
-
 /// Invoke System Call With 0 Arguments
 ///
 /// This invokes the system call with the specified system-call-number. No
@@ -186,15 +130,14 @@ extern "C" {
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall0(
     nr: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall0(nr))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall0(
+            nr,
+        )
+    )
 }
 
 /// Invoke System Call With 1 Argument
@@ -207,16 +150,16 @@ pub unsafe fn syscall0(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall1(
     nr: usize,
     arg0: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall1(nr, arg0))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall1(
+            nr,
+            arg0,
+        )
+    )
 }
 
 /// Invoke System Call With 2 Arguments
@@ -229,17 +172,18 @@ pub unsafe fn syscall1(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall2(
     nr: usize,
     arg0: usize,
     arg1: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall2(nr, arg0, arg1))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall2(
+            nr,
+            arg0,
+            arg1,
+        )
+    )
 }
 
 /// Invoke System Call With 3 Arguments
@@ -252,18 +196,20 @@ pub unsafe fn syscall2(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall3(
     nr: usize,
     arg0: usize,
     arg1: usize,
     arg2: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall3(nr, arg0, arg1, arg2))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall3(
+            nr,
+            arg0,
+            arg1,
+            arg2,
+        )
+    )
 }
 
 /// Invoke System Call With 4 Arguments
@@ -276,8 +222,6 @@ pub unsafe fn syscall3(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall4(
     nr: usize,
     arg0: usize,
@@ -285,10 +229,15 @@ pub unsafe fn syscall4(
     arg2: usize,
     arg3: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall4(nr, arg0, arg1, arg2, arg3))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall4(
+            nr,
+            arg0,
+            arg1,
+            arg2,
+            arg3,
+        )
+    )
 }
 
 /// Invoke System Call With 5 Arguments
@@ -301,8 +250,6 @@ pub unsafe fn syscall4(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall5(
     nr: usize,
     arg0: usize,
@@ -311,10 +258,16 @@ pub unsafe fn syscall5(
     arg3: usize,
     arg4: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall5(nr, arg0, arg1, arg2, arg3, arg4))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall5(
+            nr,
+            arg0,
+            arg1,
+            arg2,
+            arg3,
+            arg4,
+        )
+    )
 }
 
 /// Invoke System Call With 6 Arguments
@@ -327,8 +280,6 @@ pub unsafe fn syscall5(
 /// * System calls can have arbitrary side-effects. It is the responsibility of
 ///   the caller to consider all effects of a system call and take required
 ///   precautions.
-#[rustfmt::skip]
-#[inline(always)]
 pub unsafe fn syscall6(
     nr: usize,
     arg0: usize,
@@ -338,10 +289,17 @@ pub unsafe fn syscall6(
     arg4: usize,
     arg5: usize,
 ) -> Retval {
-    #[allow(unused_unsafe)]
-    unsafe {
-        Retval::from_usize(r_linux_asm_syscall6(nr, arg0, arg1, arg2, arg3, arg4, arg5))
-    }
+    Retval::from_usize(
+        super::arch::native::syscall::syscall6(
+            nr,
+            arg0,
+            arg1,
+            arg2,
+            arg3,
+            arg4,
+            arg5,
+        )
+    )
 }
 
 #[cfg(test)]
@@ -355,7 +313,6 @@ mod test {
         // the same semantics as the system call ABI.
         //
 
-        #[rustfmt::skip]
         let success_values = [
             0, 1, 2, 3,
             254, 255, 256, 257,
@@ -440,23 +397,6 @@ mod test {
     }
 
     #[test]
-    fn link_check() {
-        //
-        // Simply check that the linked assembly is actually available. This
-        // pulls in the symbols and prevents the dead-code-elimination from
-        // hiding missing symbols.
-        //
-
-        assert_ne!(r_linux_asm_syscall0 as *const () as usize, 0);
-        assert_ne!(r_linux_asm_syscall1 as *const () as usize, 0);
-        assert_ne!(r_linux_asm_syscall2 as *const () as usize, 0);
-        assert_ne!(r_linux_asm_syscall3 as *const () as usize, 0);
-        assert_ne!(r_linux_asm_syscall4 as *const () as usize, 0);
-        assert_ne!(r_linux_asm_syscall5 as *const () as usize, 0);
-        assert_ne!(r_linux_asm_syscall6 as *const () as usize, 0);
-    }
-
-    #[test]
     fn syscall0_check() {
         //
         // Test validity of `syscall0()`.
@@ -464,7 +404,7 @@ mod test {
         // Tested syscall: GETPID
         //
 
-        let r0 = unsafe { syscall0(crate::nr::GETPID) };
+        let r0 = unsafe { syscall0(crate::syscall::arch::native::nr::GETPID) };
         assert_eq!(r0.unwrap() as u32, std::process::id());
     }
 
@@ -481,15 +421,31 @@ mod test {
 
         let mut p0: [u32; 2] = [0, 0];
 
-        let r0 = unsafe { syscall2(crate::nr::PIPE2, p0.as_mut_ptr() as usize, 0).unwrap() };
+        let r0 = unsafe {
+            syscall2(
+                crate::syscall::arch::native::nr::PIPE2,
+                p0.as_mut_ptr() as usize,
+                0,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
         assert!(p0[0] > 2);
         assert!(p0[1] > 2);
         assert_ne!(p0[0], p0[1]);
 
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[0] as usize).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                p0[0] as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[1] as usize).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                p0[1] as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
     }
 
@@ -506,15 +462,31 @@ mod test {
 
         let mut p0: [u32; 2] = [0, 0];
 
-        let r0 = unsafe { syscall2(crate::nr::PIPE2, p0.as_mut_ptr() as usize, 0).unwrap() };
+        let r0 = unsafe {
+            syscall2(
+                crate::syscall::arch::native::nr::PIPE2,
+                p0.as_mut_ptr() as usize,
+                0,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
         assert!(p0[0] > 2);
         assert!(p0[1] > 2);
         assert_ne!(p0[0], p0[1]);
 
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[0] as usize).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                p0[0] as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[1] as usize).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                p0[1] as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
     }
 
@@ -532,7 +504,13 @@ mod test {
         let mut p0: [u32; 2] = [0, 0];
         let mut b0: [u8; 16] = [0; 16];
 
-        let r0 = unsafe { syscall2(crate::nr::PIPE2, p0.as_mut_ptr() as usize, 0).unwrap() };
+        let r0 = unsafe {
+            syscall2(
+                crate::syscall::arch::native::nr::PIPE2,
+                p0.as_mut_ptr() as usize,
+                0,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
         assert!(p0[0] > 2);
         assert!(p0[1] > 2);
@@ -540,7 +518,7 @@ mod test {
 
         let r0 = unsafe {
             syscall3(
-                crate::nr::WRITE,
+                crate::syscall::arch::native::nr::WRITE,
                 p0[1] as usize,
                 "foobar".as_ptr() as usize,
                 6 as usize,
@@ -551,7 +529,7 @@ mod test {
 
         let r0 = unsafe {
             syscall3(
-                crate::nr::READ,
+                crate::syscall::arch::native::nr::READ,
                 p0[0] as usize,
                 b0.as_mut_ptr() as usize,
                 6 as usize,
@@ -561,9 +539,19 @@ mod test {
         assert_eq!(r0, 6);
         assert_eq!(core::str::from_utf8(&b0[..6]), Ok("foobar"));
 
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[0] as usize).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                p0[0] as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, p0[1] as usize).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                p0[1] as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
     }
 
@@ -582,13 +570,17 @@ mod test {
         let mut b0: [u8; 128] = [0; 128];
 
         let f0 = unsafe {
-            syscall2(crate::nr::MEMFD_CREATE, "foobar\x00".as_ptr() as usize, 0).unwrap()
+            syscall2(
+                crate::syscall::arch::native::nr::MEMFD_CREATE,
+                "foobar\x00".as_ptr() as usize,
+                0,
+            ).unwrap()
         };
         assert!(f0 > 2);
 
         let r0 = unsafe {
             syscall4(
-                crate::nr::READLINKAT,
+                crate::syscall::arch::native::nr::READLINKAT,
                 core::usize::MAX - 100 + 1, // AT_FDCWD
                 format!("/proc/self/fd/{}\x00", f0).as_str().as_ptr() as usize,
                 b0.as_mut_ptr() as usize,
@@ -602,7 +594,12 @@ mod test {
             "/memfd:foobar (deleted)",
         );
 
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, f0).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                f0,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
     }
 
@@ -623,7 +620,7 @@ mod test {
 
         let r0 = unsafe {
             syscall5(
-                crate::nr::STATX,
+                crate::syscall::arch::native::nr::STATX,
                 core::usize::MAX - 100 + 1, // AT_FDCWD
                 "/proc/self/fd/0".as_ptr() as usize,
                 0x100, // AT_SYMLINK_NOFOLLOW
@@ -635,7 +632,11 @@ mod test {
         assert_eq!(r0, 0);
         assert_ne!(b0[0] & 0x1, 0);
         assert_eq!(
-            unsafe { core::ptr::read_unaligned((b0.as_ptr() as *const u16).offset(14)) } & 0o170000, // S_IFMT
+            unsafe {
+                core::ptr::read_unaligned(
+                    (b0.as_ptr() as *const u16).offset(14)
+                )
+            } & 0o170000, // S_IFMT
             0o120000, // S_IFLNK
         );
     }
@@ -656,10 +657,18 @@ mod test {
         let mut b0: [u8; 128] = [0; 128];
 
         let f0 = unsafe {
-            syscall2(crate::nr::MEMFD_CREATE, "foobar\x00".as_ptr() as usize, 0).unwrap()
+            syscall2(
+                crate::syscall::arch::native::nr::MEMFD_CREATE,
+                "foobar\x00".as_ptr() as usize,
+                0,
+            ).unwrap()
         };
         let f1 = unsafe {
-            syscall2(crate::nr::MEMFD_CREATE, "foobar\x00".as_ptr() as usize, 0).unwrap()
+            syscall2(
+                crate::syscall::arch::native::nr::MEMFD_CREATE,
+                "foobar\x00".as_ptr() as usize,
+                0,
+            ).unwrap()
         };
         assert!(f0 > 2);
         assert!(f1 > 2);
@@ -667,7 +676,7 @@ mod test {
 
         let r0 = unsafe {
             syscall3(
-                crate::nr::WRITE,
+                crate::syscall::arch::native::nr::WRITE,
                 f0 as usize,
                 "foobar".as_ptr() as usize,
                 6 as usize,
@@ -676,13 +685,19 @@ mod test {
         };
         assert_eq!(r0, 6);
 
-        let r0 =
-            unsafe { syscall3(crate::nr::LSEEK, f0 as usize, 0 as usize, 0 as usize).unwrap() };
+        let r0 = unsafe {
+            syscall3(
+                crate::syscall::arch::native::nr::LSEEK,
+                f0 as usize,
+                0 as usize,
+                0 as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
 
         let r0 = unsafe {
             syscall6(
-                crate::nr::COPY_FILE_RANGE,
+                crate::syscall::arch::native::nr::COPY_FILE_RANGE,
                 f0 as usize,
                 0 as usize,
                 f1 as usize,
@@ -694,13 +709,19 @@ mod test {
         };
         assert_eq!(r0, 6);
 
-        let r0 =
-            unsafe { syscall3(crate::nr::LSEEK, f1 as usize, 0 as usize, 0 as usize).unwrap() };
+        let r0 = unsafe {
+            syscall3(
+                crate::syscall::arch::native::nr::LSEEK,
+                f1 as usize,
+                0 as usize,
+                0 as usize,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
 
         let r0 = unsafe {
             syscall3(
-                crate::nr::READ,
+                crate::syscall::arch::native::nr::READ,
                 f1 as usize,
                 b0.as_mut_ptr() as usize,
                 6 as usize,
@@ -710,9 +731,19 @@ mod test {
         assert_eq!(r0, 6);
         assert_eq!(core::str::from_utf8(&b0[..6]), Ok("foobar"));
 
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, f1).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                f1,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
-        let r0 = unsafe { syscall1(crate::nr::CLOSE, f0).unwrap() };
+        let r0 = unsafe {
+            syscall1(
+                crate::syscall::arch::native::nr::CLOSE,
+                f0,
+            ).unwrap()
+        };
         assert_eq!(r0, 0);
     }
 }

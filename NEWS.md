@@ -1,4 +1,4 @@
-# r-linux - Linux Kernel API Bindings
+# r-linux - Capability-based Linux Runtime
 
 ## CHANGES WITH 0.1.0:
 
