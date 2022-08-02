@@ -6,11 +6,47 @@
 //! That is, binary formatting of argument structures still need to be
 //! performed by the caller. However, correct syscall invocation and splitting
 //! across registers is performed by these helpers.
+//!
+//! Note that the kernel is particularly good in using any unused bits in input
+//! and output values to assign new meaning to. Therefore, while we try to be
+//! as specific in the type-system as possible, we must also make sure to be
+//! future-proof and allow passing invalid values along just as well.
 
 /// Error Number
+///
+/// The linux kernel commonly returns error information as an integer code
+/// between 1 and 4096. These have associated symbolic names and are used each
+/// for a wide range of possible errors, some more specific, some more generic.
+///
+/// We encode the error numbers as a u16, to better encapsulate their range.
+/// This can be easily converted to the `i32` used by most C standard
+/// libraries.
+///
+/// A value of 0 is not a valid error number, same as any value greater than
+/// 4096. It depends on the context how these invalid values are treated.
 pub type Errno = u16;
 
-/// Process Identifier
+/// Task Identifier
+///
+/// Individual tasks all come with a set of identifiers to set them apart. They
+/// have historically been called process identifiers, hence the name `PID`.
+/// However, the most specific one on linux is the task identifier, a unique
+/// number to identify each linux task (i.e., thread of execution). Other
+/// IDs of this type include the thread- and process-group ID, as well as the
+/// session ID.
+///
+/// Linux always represents these IDs with an `i32`. Note that 0, as well as
+/// negative values are considered invalid. Technically, anything up to I32_MAX
+/// can be a valid ID, but usually the kernel is configured with a soft limit
+/// way below this (currently 4-million).
+///
+/// The `0` value is used by some syscalls to signal special conditions. For
+/// instance `fork(2)` returns 0 in the child process, to distinguish it from
+/// the return in the parent process.
+/// Negative values are commonly used to identify task groups rather than
+/// individual tasks. See the `kill(2)` system call for an example.
+///
+/// It depends on context whether "invalid" PID values have a meaning assigned.
 pub type Pid = i32;
 
 /// Exit Task
@@ -36,6 +72,21 @@ pub unsafe fn exit(code: u32) -> ! {
 }
 
 /// Fork Task
+///
+/// Create a new thread of execution by forking the calling task. The calling
+/// task will simply return from this system call and continue as normal. The
+/// return value is the PID of the newly created task.
+///
+/// Unlike the calling task, the newly created task will start execution at
+/// exactly the position where this system call was invoked and return with a
+/// `None` value from this system call. The new task will be mostly a duplicate
+/// of the original task. Some values, however, are not inherited and instead
+/// reset to their default or freshly allocated.
+///
+/// See the `clone(2)` system-call for a more detailed description of the
+/// creation of new tasks.
+///
+/// On error, an error-code is returned and no new process is created.
 pub unsafe fn fork() -> Result<Option<Pid>, Errno> {
     super::raw::syscall0(
         super::arch::native::nr::FORK,
