@@ -9,6 +9,28 @@
 
 pub use super::raw::Retval;
 
+/// Exit Task
+///
+/// Stop the current execution and tear down this task. Other tasks of a
+/// possible thread group are left around. See the linux task model for
+/// information how threads and processes map to linux tasks.
+///
+/// Takes a single argument `code` which specifies the exit condition of the
+/// running task.
+///
+/// This system call never returns, under no circumstances. This also implies
+/// that this system call cannot be interrupted.
+///
+/// The kernel uses the lower byte of `code` as exit-code of the task. The
+/// remaining bits of `code` are ignored.
+pub unsafe fn exit(code: u32) -> ! {
+    super::raw::syscall1(
+        super::arch::native::nr::EXIT,
+        code as usize,
+    );
+    core::unreachable!("`r_linux::syscall::api::exit()` unexpectedly returned");
+}
+
 /// Restart System Call
 ///
 /// This system call continues an interrupted system call with the same
@@ -41,21 +63,6 @@ pub unsafe fn restart_syscall() -> Retval {
         super::arch::native::nr::RESTART_SYSCALL,
     )
 }
-
-/// Exit Task
-///
-/// `fn sys_exit(code: u32) -> !`
-///
-/// Stop the current execution and tear down this task. Other tasks of a
-/// possible thread group are left around. See the linux task model for
-/// information how threads and processes map to linux tasks.
-///
-/// Takes a single argument `code` which specifies the exit condition of the
-/// running task.
-///
-/// This system call never returns, under no circumstances. This also implies
-/// that this system call cannot be interrupted.
-pub use crate::syscall::arch::native::nr::EXIT;
 
 /// Fork Task
 ///
