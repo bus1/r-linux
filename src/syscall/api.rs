@@ -36,10 +36,16 @@ pub unsafe fn exit(code: u32) -> ! {
 }
 
 /// Fork Task
-pub unsafe fn fork() -> Result<Pid, Errno> {
+pub unsafe fn fork() -> Result<Option<Pid>, Errno> {
     super::raw::syscall0(
         super::arch::native::nr::FORK,
-    ).to_result().map(|v| Pid::try_from(v).unwrap())
+    ).to_result().map(|v| {
+        let p = Pid::try_from(v).unwrap();
+        match p {
+            0 => None,
+            _ => Some(p),
+        }
+    })
 }
 
 /// Restart System Call
