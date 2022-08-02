@@ -139,4 +139,15 @@ mod test {
         assert_ne!(s5 as *const () as usize, 0);
         assert_ne!(s6 as *const () as usize, 0);
     }
+
+    #[test]
+    fn arch_check() {
+        //
+        // Check for basic architecture properties that need to be satisfied by
+        // all linux architectures and is relied upon.
+        //
+
+        assert!(core::mem::size_of::<usize>() >= 4);
+        assert!(core::mem::align_of::<usize>() >= 4);
+    }
 }
