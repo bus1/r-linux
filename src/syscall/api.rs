@@ -7,8 +7,6 @@
 //! performed by the caller. However, correct syscall invocation and splitting
 //! across registers is performed by these helpers.
 
-pub use super::raw::Retval;
-
 /// Exit Task
 ///
 /// Stop the current execution and tear down this task. Other tasks of a
@@ -58,10 +56,10 @@ pub unsafe fn exit(code: u32) -> ! {
 /// If no system call is to be resumed, this system call returns `EINTR`.
 /// Otherwise, it resumes the original system call with adjusted relative time
 /// parameters and returns the result of the resumed system call.
-pub unsafe fn restart_syscall() -> Retval {
+pub unsafe fn restart_syscall() -> Result<usize, Errno> {
     super::raw::syscall0(
         super::arch::native::nr::RESTART_SYSCALL,
-    )
+    ).to_result()
 }
 
 /// Fork Task
