@@ -9,7 +9,7 @@ BUILDDIR ?= .
 SRCDIR ?= .
 
 BIN_CARGO ?= cargo
-BIN_CLANG ?= clang-11
+BIN_CLANG ?= clang-14
 BIN_LLD ?= lld
 BIN_MKDIR ?= mkdir
 BIN_OBJDUMP ?= objdump

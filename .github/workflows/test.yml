@@ -25,7 +25,9 @@ jobs:
 
     steps:
     - name: "Install latest LLVM"
-      run: sudo bash -c "bash <(curl https://apt.llvm.org/llvm.sh) 11"
+      run: sudo bash -c "bash <(curl https://apt.llvm.org/llvm.sh) 14"
+    - name: "Install Rust Nightly"
+      run: rustup toolchain install nightly
     - name: "Fetch Sources"
       uses: actions/checkout@v2
     - name: "Run xLTO Test"
