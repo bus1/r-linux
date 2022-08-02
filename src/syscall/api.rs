@@ -7,6 +7,12 @@
 //! performed by the caller. However, correct syscall invocation and splitting
 //! across registers is performed by these helpers.
 
+/// Error Number
+pub type Errno = u16;
+
+/// Process Identifier
+pub type Pid = i32;
+
 /// Exit Task
 ///
 /// Stop the current execution and tear down this task. Other tasks of a
@@ -27,6 +33,13 @@ pub unsafe fn exit(code: u32) -> ! {
         code as usize,
     );
     core::unreachable!("`r_linux::syscall::api::exit()` unexpectedly returned");
+}
+
+/// Fork Task
+pub unsafe fn fork() -> Result<Pid, Errno> {
+    super::raw::syscall0(
+        super::arch::native::nr::FORK,
+    ).to_result().map(|v| Pid::try_from(v).unwrap())
 }
 
 /// Restart System Call
@@ -61,11 +74,6 @@ pub unsafe fn restart_syscall() -> Result<usize, Errno> {
         super::arch::native::nr::RESTART_SYSCALL,
     ).to_result()
 }
-
-/// Fork Task
-///
-/// XXX
-pub use crate::syscall::arch::native::nr::FORK;
 
 /// Read from File-Descriptor
 ///
