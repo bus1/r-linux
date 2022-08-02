@@ -113,9 +113,9 @@ impl Retval {
     /// `Result` type, rather than re-implementing them for this native type.
     pub fn to_result(self) -> Result<usize, usize> {
         if self.is_error() {
-            Err(!self.0 + 1)
+            Err(unsafe { self.error_unchecked() })
         } else {
-            Ok(self.0)
+            Ok(unsafe { self.unwrap_unchecked() })
         }
     }
 }
