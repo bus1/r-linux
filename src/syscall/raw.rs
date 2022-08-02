@@ -69,14 +69,14 @@ impl Retval {
     ///
     /// This does not verify that `self` is actually an error-return. It
     /// assumes the caller verified it.
-    pub unsafe fn error_unchecked(self) -> usize {
-        !self.0 + 1
+    pub unsafe fn error_unchecked(self) -> u16 {
+        (!self.0 + 1) as u16
     }
 
     /// Return the error-code
     ///
     /// If `self` is not actually an error-return, this will panic.
-    pub fn error(self) -> usize {
+    pub fn error(self) -> u16 {
         if self.is_error() {
             unsafe { self.error_unchecked() }
         } else {
@@ -111,7 +111,7 @@ impl Retval {
     /// maps the error-return to `Err(code)` and the success-return
     /// to `Ok(usize)`. This allows using the rich convenience library of the
     /// `Result` type, rather than re-implementing them for this native type.
-    pub fn to_result(self) -> Result<usize, usize> {
+    pub fn to_result(self) -> Result<usize, u16> {
         if self.is_error() {
             Err(unsafe { self.error_unchecked() })
         } else {
