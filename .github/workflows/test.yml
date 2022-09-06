@@ -18,19 +18,3 @@ jobs:
       run: cargo build --verbose --all-targets
     - name: "Run Tests"
       run: cargo test --verbose
-
-  xlto:
-    name: "xLTO Test"
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: "Install latest LLVM"
-      run: sudo bash -c "bash <(curl https://apt.llvm.org/llvm.sh) 14"
-    - name: "Install Rust Nightly"
-      run: rustup toolchain install nightly
-    - name: "Fetch Sources"
-      uses: actions/checkout@v2
-    - name: "Run xLTO Test"
-      run: make test-syscall-xlto
-    - name: "Run no-xLTO Test"
-      run: make test-syscall-no-xlto
